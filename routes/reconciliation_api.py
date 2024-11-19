@@ -1,14 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
-from models.bankdata import BankData
-from schemas.bankdata_schemas import BankDataCreateReq
 from config.database import get_db_session
-from utils.utils import load_excel_data
 import pandas as pd
 
-from sqlalchemy.future import select
+from datetime import datetime
+import os
 
 
 # Create a new instance of APIRouter
@@ -69,5 +66,52 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
             SELECT * FROM bank_data
         """)
         updated_bank_data = db.execute(updated_bank_data_query).fetchall()
-        result = [dict(row._mapping) for row in updated_bank_data]
-        return {"result": result}
+        data1 = {
+            "Date d'encaissement": [row.Date for row in updated_bank_data],
+            "Montant perçu": [row.Credit for row in updated_bank_data],
+            "Mode de paiement": ["Virement"] * len(updated_bank_data),  # Assuming 'Virement' is constant
+            "N° du Règlement": [row.TransactionNumber for row in updated_bank_data],
+            "Compte bancaire": [row.Bank for row in updated_bank_data],
+            "Commentaire": ["" for _ in updated_bank_data],  # Assuming no data available
+            "Lettrage": [row.Matching for row in updated_bank_data]
+        }
+        df1 = pd.DataFrame(data1)
+        static_folder = 'static/'  # Adjust the path as needed
+        date_str = datetime.now().strftime("%y%m%d")
+        serial_number = "001"  # Replace with logic to generate a serial number if needed
+        filename1 = f"Encaissements à enregistrer dans Cinego {date_str}{serial_number}.xlsx"
+        file_path1 = os.path.join(static_folder, filename1)
+        
+        # Step 4: Save the Excel file
+        with pd.ExcelWriter(file_path1, engine='xlsxwriter') as writer:
+            df1.to_excel(writer, index=False, sheet_name='BankData')
+        
+        
+        query2 = text("""
+        SELECT "Bank", "Date", "Wording", "Credit", "TransactionNumber"
+        FROM bank_data
+        WHERE "Matching" IS NULL OR "Matching" = ''
+        """)
+        non_matched_entries = db.execute(query2).fetchall()
+        data2 = {
+            "Compte bancaire": [row.Bank for row in non_matched_entries],
+            "Date d'encaissement ": [row.Date for row in non_matched_entries],
+            "Libelle": [row.Wording for row in non_matched_entries],
+            "Montant perçu": [row.Credit for row in non_matched_entries],
+            "N° du Règlement": [row.TransactionNumber for row in non_matched_entries]
+        }
+        df2 = pd.DataFrame(data2)
+
+        # Step 2: Create a CSV file
+        filename2 = f"Lettrage non effectué {date_str}{serial_number}.xlsx"
+        file_path2 = os.path.join(static_folder, filename2)
+        
+        with pd.ExcelWriter(file_path2, engine='xlsxwriter') as writer:
+            df2.to_excel(writer, index=False, sheet_name='BankData')
+
+        # Step 5: Optionally, return a response
+        return {
+            "message": "File saved successfully", 
+            "export1": f"{os.getenv('BASE_URL')}/{file_path1}", 
+            "export2": f"{os.getenv('BASE_URL')}/{file_path2}"
+        }

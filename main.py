@@ -51,7 +51,8 @@ async def root():
         return {"message": "Welcome to the Backend API"}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
-
+    
+app.mount("/static", StaticFiles(directory="static"), name="result")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level="info", reload=True)
