@@ -3,23 +3,25 @@ from sqlalchemy import (
     String,
     Date,
     Integer,
-    Float
+    Float,
+    Text
 )
 
-from .base import Base
+from models.base import Base
 
-class BankData1(Base):
+class BankData(Base):
     __tablename__ = "bank_data"
     
     id = Column(Integer, primary_key=True, index=True)
-    bank = Column(String, index=True)
-    bank_date = Column(Date, index=True)
-    wording = Column(String, index=True)
-    client_name = Column(String, index=True)
-    client_number = Column(String, index=True)
-    transaction_number = Column(String, index=True)
-    credit = Column(Float, index=True)
-    matching = Column(String, index=True)
+    Bank = Column(String, index=True)
+    Date = Column(Date, index=True)
+    Wording = Column(String, index=True)
+    ClientName = Column(String, index=True)
+    ClientNumber = Column(String, index=True)
+    TransactionNumber = Column(String, index=True)
+    Credit = Column(Float, index=True)
+    Matching = Column(Text, index=True)
     
-    
+    class Config:
+        from_attributes = True
     

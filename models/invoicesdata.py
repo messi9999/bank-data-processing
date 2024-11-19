@@ -7,17 +7,18 @@ from sqlalchemy import (
     Float
 )
 
-from .base import Base
+from models.base import Base
 
 class InvoiceData(Base):
     __tablename__ = "invoice_data"
     
     id = Column(Integer, primary_key=True, index=True)
-    invoice_date = Column(Date, index=True)
-    wording = Column(String, index=True)
-    client_name = Column(String, index=True)
+    Date = Column(Date, index=True)
+    InvoiceNumber = Column(String, index=True)
+    ClientName = Column(String, index=True)
     Amount = Column(Float, index=True)
-    Status = Column(Boolean, index=True)
+    Status = Column(String, index=True)
     
-    
-    
+    class Config:
+        from_attributes = True
+

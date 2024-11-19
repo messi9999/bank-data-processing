@@ -6,18 +6,24 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.responses import FileResponse
 
+from config import database
+
 import uvicorn
-from routes import file_upload_api, bank_api
+from routes import file_upload_api, bank_api, invoice_api, reconciliation_api
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Run when starts the server.
     print("Starting server...")
-   
+    print("Connecting database...")
+    await database.database.connect()
+    # database.drop_all_tables()
+    # database.create_tables()
     yield
     # Run when shutdown the server.
     print("Shutdown server..")
+    await database.database.disconnect()
 
 
 app = FastAPI(
@@ -34,6 +40,8 @@ app.add_middleware(
 
 app.include_router(file_upload_api.api_router)
 app.include_router(bank_api.api_router)
+app.include_router(invoice_api.api_router)
+app.include_router(reconciliation_api.api_router)
 
 
 
@@ -46,4 +54,4 @@ async def root():
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level="info", reload=True)

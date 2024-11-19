@@ -3,12 +3,13 @@ from datetime import date
 from typing import List
 
 
-class BankDataCreateReq(BaseModel):
-    file_names: List[str]
+class InvoiceDataCreateReq(BaseModel):
+    list_file_names: List[str]
+    status_file_names: List[str]
 
 
 # Pydantic schema for bank data output (includes ID)
-class BankDataCreateRes(BaseModel):
+class InvoiceDataCreateRes(BaseModel):
     id: int
     bank_date: date
     wording: str
