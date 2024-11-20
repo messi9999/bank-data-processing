@@ -76,7 +76,7 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
             "Lettrage": [row.Matching for row in updated_bank_data]
         }
         df1 = pd.DataFrame(data1)
-        static_folder = 'static/'  # Adjust the path as needed
+        static_folder = 'exports/'  # Adjust the path as needed
         date_str = datetime.now().strftime("%y%m%d")
         serial_number = "001"  # Replace with logic to generate a serial number if needed
         filename1 = f"Encaissements à enregistrer dans Cinego {date_str}{serial_number}.xlsx"

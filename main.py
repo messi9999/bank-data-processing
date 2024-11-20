@@ -38,21 +38,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(file_upload_api.api_router)
-app.include_router(bank_api.api_router)
-app.include_router(invoice_api.api_router)
-app.include_router(reconciliation_api.api_router)
+app.include_router(file_upload_api.api_router, prefix="/api")
+app.include_router(bank_api.api_router, prefix="/api")
+app.include_router(invoice_api.api_router, prefix="/api")
+app.include_router(reconciliation_api.api_router, prefix="/api")
 
 
 
-@app.get("/")
+@app.get("/api-test")
 async def root():
     try:
         return {"message": "Welcome to the Backend API"}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
     
-app.mount("/static", StaticFiles(directory="static"), name="result")
+app.mount("/exports", StaticFiles(directory="exports"), name="result")
+app.mount("/", StaticFiles(directory="build", html=True), name="static")
+app.mount("/static", StaticFiles(directory="build/static"), name="static-resources")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level="info", reload=True)
