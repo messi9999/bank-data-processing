@@ -18,8 +18,8 @@ async def lifespan(app: FastAPI):
     print("Starting server...")
     print("Connecting database...")
     await database.database.connect()
-    # database.drop_all_tables()
-    # database.create_tables()
+    database.drop_all_tables()
+    database.create_tables()
     yield
     # Run when shutdown the server.
     print("Shutdown server..")
