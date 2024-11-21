@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from config import database
 
 import uvicorn
-from routes import file_upload_api, bank_api, invoice_api, reconciliation_api
+from routes import file_upload_api, bank_api, invoice_api, reconciliation_api, db_api
 
 
 @asynccontextmanager
@@ -18,8 +18,8 @@ async def lifespan(app: FastAPI):
     print("Starting server...")
     print("Connecting database...")
     await database.database.connect()
-    database.drop_all_tables()
-    database.create_tables()
+    # database.drop_all_tables()
+    # database.create_tables()
     yield
     # Run when shutdown the server.
     print("Shutdown server..")
@@ -42,6 +42,7 @@ app.include_router(file_upload_api.api_router, prefix="/api")
 app.include_router(bank_api.api_router, prefix="/api")
 app.include_router(invoice_api.api_router, prefix="/api")
 app.include_router(reconciliation_api.api_router, prefix="/api")
+app.include_router(db_api.api_router, prefix="/api")
 
 
 
