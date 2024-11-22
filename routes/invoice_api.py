@@ -35,6 +35,7 @@ def create_invoice_list(invoice_data: InvoiceDataCreateReq, db: Session = Depend
     # Filter the DataFrame
     
     df_filtered = data.dropna(subset=['Column6'])
+    df_filtered = df_filtered[df_filtered['Column6'] != 0]
     
     df_filtered['Column7'] = "" 
         
