@@ -11,6 +11,23 @@ import os
 # Create a new instance of APIRouter
 api_router = APIRouter()
 
+def find_invoices_subset(invoices, bank_amount, partial=[]):
+    s = sum(invoice.Amount for invoice in partial)
+
+    # Check if the partial sum is equals to target
+    if s == bank_amount:
+        return partial
+    if s >= bank_amount:
+        return None
+
+    for i in range(len(invoices)):
+        n = invoices[i]
+        remaining = invoices[i+1:]
+        subset = find_invoices_subset(remaining, bank_amount, partial + [n])
+        if subset:
+            return subset
+
+    return None
 
 @api_router.get("/reconciliation/")
 def create_invoice_list(db: Session = Depends(get_db_session)):
@@ -27,6 +44,14 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
             WHERE "Status" NOT IN ('Soldée')
         """)
         invoice_data_entries = db.execute(invoice_data_query).fetchall()
+        
+        filtered_invoices = []
+        
+        for invoice in invoice_data_entries:
+            if invoice.Status is not "Soldée" and invoice.Status is not "soldée":
+                filtered_invoices.append(invoice)
+        
+        print(filtered_invoices)
 
         # Step 2: Match credits with invoices
         for bank_entry in bank_data_entries:
@@ -34,10 +59,16 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
             credit = bank_entry.Credit
             transaction_number = bank_entry.TransactionNumber
 
-            matching_invoices = [
-                invoice for invoice in invoice_data_entries
-                if invoice.Amount == credit and invoice.Status not in ('Soldée', transaction_number)
-            ]
+            # matching_invoices = [
+            #     invoice for invoice in invoice_data_entries
+            #     if invoice.Amount == credit and invoice.Status not in ('Soldée', transaction_number)
+            # ]
+            
+            matching_invoices = find_invoices_subset(filtered_invoices, credit)
+            print("credit: ", credit)
+            print("machings: ", matching_invoices)
+            
+                
 
             if matching_invoices:
                 # Update the Matching field in bank_data
