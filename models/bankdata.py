@@ -4,7 +4,7 @@ from sqlalchemy import (
     Date,
     Integer,
     Float,
-    Text
+    ARRAY
 )
 
 from models.base import Base
@@ -20,7 +20,7 @@ class BankData(Base):
     ClientNumber = Column(String, index=True)
     TransactionNumber = Column(String, index=True)
     Credit = Column(Float, index=True)
-    Matching = Column(Text, index=True)
+    Matching = Column(ARRAY(String), index=True)
     
     class Config:
         from_attributes = True

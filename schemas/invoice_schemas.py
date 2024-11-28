@@ -6,6 +6,9 @@ from typing import List
 class InvoiceDataCreateReq(BaseModel):
     list_file_names: List[str]
     status_file_names: List[str]
+    
+class InvoiceListDataCreateReq(BaseModel):
+    status_file_names: List[str]
 
 
 # Pydantic schema for bank data output (includes ID)

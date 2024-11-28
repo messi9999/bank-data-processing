@@ -1,15 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from config.database import get_db_session
 import pandas as pd
+from pathlib import Path
+import shutil
+import uuid
+
+from utils.utils import load_excel_data, load_excel_sheet
 
 from datetime import datetime
 import os
+import zipfile
 
 
 # Create a new instance of APIRouter
 api_router = APIRouter()
+
+
+# Ensure the excels directory exists
+EXCELS_DIR = Path("excels")
+EXCELS_DIR.mkdir(exist_ok=True)
 
 def find_invoices_subset(invoices, bank_amount, partial=[]):
     s = sum(invoice.Amount for invoice in partial)
@@ -72,7 +83,8 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
 
             if matching_invoices:
                 # Update the Matching field in bank_data
-                invoice_numbers = ', '.join([str(inv.InvoiceNumber) for inv in matching_invoices])
+                # invoice_numbers = ', '.join([str(inv.InvoiceNumber) for inv in matching_invoices])
+                invoice_numbers = [str(inv.InvoiceNumber) for inv in matching_invoices]
                 update_bank_data_query = text("""
                     UPDATE bank_data
                     SET "Matching" = :invoice_numbers
@@ -116,12 +128,24 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
         # Step 4: Save the Excel file
         with pd.ExcelWriter(file_path1, engine='xlsxwriter') as writer:
             df1.to_excel(writer, index=False, sheet_name='BankData')
+            # Get the xlsxwriter workbook and worksheet objects.
+            workbook  = writer.book
+            worksheet = writer.sheets['BankData']
+            
+            # Set the column widths
+            worksheet.set_column('A:A', 110)  # Set the width of column A to 20
+            worksheet.set_column('B:B', 80)  # Set the width of column B to 15
+            worksheet.set_column('C:C', 100)  # Set the width of column C to 25
+            worksheet.set_column('D:D', 90)  # Set the width of column C to 25
+            worksheet.set_column('E:E', 90)  # Set the width of column C to 25
+            worksheet.set_column('F:F', 70)  # Set the width of column C to 25
+            worksheet.set_column('G:G', 190)  # Set the width of column C to 25
         
         
         query2 = text("""
         SELECT "Bank", "Date", "Wording", "Credit", "TransactionNumber"
         FROM bank_data
-        WHERE "Matching" IS NULL OR "Matching" = ''
+        WHERE "Matching" IS NULL
         """)
         non_matched_entries = db.execute(query2).fetchall()
         data2 = {
@@ -139,10 +163,90 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
         
         with pd.ExcelWriter(file_path2, engine='xlsxwriter') as writer:
             df2.to_excel(writer, index=False, sheet_name='BankData')
+            # Get the xlsxwriter workbook and worksheet objects.
+            workbook  = writer.book
+            worksheet = writer.sheets['BankData']
+            
+            # Set the column widths
+            worksheet.set_column('A:A', 90)  # Set the width of column A to 20
+            worksheet.set_column('B:B', 110)  # Set the width of column B to 15
+            worksheet.set_column('C:C', 110)  # Set the width of column C to 25
+            worksheet.set_column('D:D', 80)  # Set the width of column C to 25
+            worksheet.set_column('E:E', 90)  # Set the width of column C to 25
+        
+        # Define the name of the resulting zip file
+        unique_filename = f"{uuid.uuid4().hex}_result.zip"
+        zip_filename = os.path.join(static_folder, unique_filename)
+
+        # Create a zip file and add the two files
+        with zipfile.ZipFile(zip_filename, 'w') as zipf:
+            zipf.write(file_path1, os.path.basename(file_path1))
+            zipf.write(file_path2, os.path.basename(file_path2))
+
 
         # Step 5: Optionally, return a response
         return {
             "message": "File saved successfully", 
-            "export1": f"{os.getenv('BASE_URL')}/{file_path1}", 
-            "export2": f"{os.getenv('BASE_URL')}/{file_path2}"
+            "export": f"{os.getenv('BASE_URL')}/{zip_filename}"
         }
+
+
+@api_router.post("/pre-reconciliation/")
+async def pre_reconciliation(files: list[UploadFile] = File(...), db: Session = Depends(get_db_session)):
+    file_names = []
+    for file in files:
+        # Generate a unique file name
+        unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+        try:
+            file_location = EXCELS_DIR / unique_filename
+            with file_location.open("wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
+        finally:
+            await file.close()
+        
+        file_names.append(unique_filename)
+        
+    df_combined = pd.DataFrame()
+    for file_name in file_names:
+        data = load_excel_sheet(file_path=f"excels/{file_name}")
+        df_combined = pd.concat([df_combined, data], ignore_index=True)
+    
+    # transaction_sums = data.groupby('Numéro')['Montant TTC'].sum()
+    transaction_aggregates = df_combined.groupby('Numéro').agg({
+        'Montant TTC': 'sum',
+        'Facture': lambda x: list(x)
+    })
+    
+    # Step 1: Fetch all eligible bank_data and invoice_data
+    bank_data_query = text("""
+        SELECT id, "Credit", "TransactionNumber"
+        FROM bank_data
+    """)
+    bank_data_entries = db.execute(bank_data_query).fetchall()
+    
+    # Step 2: Match credits with invoices
+    for bank_entry in bank_data_entries:
+        bank_id = bank_entry.id
+        credit = bank_entry.Credit
+        transaction_number = bank_entry.TransactionNumber
+        
+        for index, row in transaction_aggregates.iterrows():
+            if str(credit) == str(row["Montant TTC"]):
+                invoice_numbers = row['Facture']
+                update_bank_data_query = text("""
+                    UPDATE bank_data
+                    SET "Matching" = :invoice_numbers
+                    WHERE id = :bank_id
+                """)
+                db.execute(update_bank_data_query, {"invoice_numbers": invoice_numbers, "bank_id": bank_id})
+                
+
+    # Commit the changes
+    db.commit() 
+    
+    return {"status": "Success"}
+            
+        
+    
