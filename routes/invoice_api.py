@@ -10,7 +10,7 @@ import shutil
 import uuid
 import json
 from schemas.invoice_schemas import InvoiceDataCreateReq, InvoiceListDataCreateReq
-
+import os
 
 
 # Create a new instance of APIRouter
@@ -101,6 +101,7 @@ async def create_invoice_list(invoice_status: str = Form(...), files: list[Uploa
         invoice_status_data = json.loads(invoice_status)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON format for invoice_status")
+    file_locations = []
     for file in files:
         # Generate a unique file name
         unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
@@ -108,6 +109,7 @@ async def create_invoice_list(invoice_status: str = Form(...), files: list[Uploa
             file_location = EXCELS_DIR / unique_filename
             with file_location.open("wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
+                file_locations.append(file_location)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
         finally:
@@ -142,6 +144,7 @@ async def create_invoice_list(invoice_status: str = Form(...), files: list[Uploa
     for status_file_name in status_file_names:
         data = load_excel_data(file_path=f"excels/{status_file_name}")
         df_combined_status = pd.concat([df_combined_status, data], ignore_index=True)
+        file_locations.append(EXCELS_DIR / status_file_name)
     
     for invoice_number in df_combined_status['Numéro']:
         # Find the corresponding row in df_filtered and set 'Column7' to 'Soldée'
@@ -179,6 +182,11 @@ async def create_invoice_list(invoice_status: str = Form(...), files: list[Uploa
             );
         """))
     db.commit()
+    for f in file_locations:
+        try:
+            os.remove(f)
+        except OSError as e:
+            print(f"Error: {f} : {e.strerror}")
         
         
     return {"status": "Success"}

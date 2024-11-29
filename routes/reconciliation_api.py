@@ -197,10 +197,12 @@ async def pre_reconciliation(files: list[UploadFile] = File(...), db: Session = 
     for file in files:
         # Generate a unique file name
         unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+        file_locations = []
         try:
             file_location = EXCELS_DIR / unique_filename
             with file_location.open("wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
+                file_locations.append(file_location)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
         finally:
@@ -245,6 +247,11 @@ async def pre_reconciliation(files: list[UploadFile] = File(...), db: Session = 
 
     # Commit the changes
     db.commit() 
+    for f in file_locations:
+        try:
+            os.remove(f)
+        except OSError as e:
+            print(f"Error: {f} : {e.strerror}")
     
     return {"status": "Success"}
             
