@@ -10,6 +10,7 @@ from pathlib import Path
 import pandas as pd
 import shutil
 import uuid
+import os
 
 from sqlalchemy.future import select
 
@@ -134,6 +135,7 @@ def create_bank2_data(bank_data: BankDataCreateReq, db: Session = Depends(get_db
 @api_router.post("/bank-data1-process/")
 async def bank_data1_process(files: list[UploadFile] = File(...), db: Session = Depends(get_db_session)):
     file_names = []
+    file_locations = []
     for file in files:
         # Generate a unique file name
         unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
@@ -141,16 +143,18 @@ async def bank_data1_process(files: list[UploadFile] = File(...), db: Session = 
             file_location = EXCELS_DIR / unique_filename
             with file_location.open("wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
+                file_locations.append(file_location)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
         finally:
             await file.close()
         
         file_names.append(unique_filename)
+        
 
     df_combined = pd.DataFrame()
     for file_name in file_names:
-        data = load_excel_data(file_path=f"excels/{file_name}")
+        data = load_excel_data(file_path=f"excels/{file_name}", skiprows=3)
         df_combined = pd.concat([df_combined, data], ignore_index=True)
         # Filter the DataFrame
     df_filtered = df_combined.loc[df_combined["Nature de l'opération"] == 'Virements reçus']
@@ -160,6 +164,12 @@ async def bank_data1_process(files: list[UploadFile] = File(...), db: Session = 
     df_filtered['TransactionNumber'] = df_filtered.groupby('Date opération').cumcount() + 1
     df_filtered['TransactionNumber'] = 'C' + df_filtered['Date opération'].dt.strftime('%y%m%d') + df_filtered['TransactionNumber'].apply(lambda x: f'{x:03}')
 
+    for f in file_locations:
+        try:
+            os.remove(f)
+        except OSError as e:
+            print(f"Error: {f} : {e.strerror}")
+    
     db_bank_data_list = []
     for index, row in df_filtered.iterrows():
         db_bank_data = BankData(
@@ -194,12 +204,15 @@ async def bank_data1_process(files: list[UploadFile] = File(...), db: Session = 
     db.commit()
     
     
+    
+    
     return {"status": "Success"}
 
 
 @api_router.post("/bank-data2-process/")
 async def bank_data2_process(files: list[UploadFile] = File(...), db: Session = Depends(get_db_session)):
     file_names = []
+    file_locations = []
     for file in files:
         # Generate a unique file name
         unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
@@ -207,6 +220,7 @@ async def bank_data2_process(files: list[UploadFile] = File(...), db: Session = 
             file_location = EXCELS_DIR / unique_filename
             with file_location.open("wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
+                file_locations.append(file_location)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
         finally:
@@ -261,6 +275,12 @@ async def bank_data2_process(files: list[UploadFile] = File(...), db: Session = 
             );
         """))
     db.commit()
+    
+    for f in file_locations:
+        try:
+            os.remove(f)
+        except OSError as e:
+            print(f"Error: {f} : {e.strerror}")
 
             
     return {"status": "Success"}

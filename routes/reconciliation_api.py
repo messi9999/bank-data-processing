@@ -133,13 +133,13 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
             worksheet = writer.sheets['BankData']
             
             # Set the column widths
-            worksheet.set_column('A:A', 110)  # Set the width of column A to 20
-            worksheet.set_column('B:B', 80)  # Set the width of column B to 15
-            worksheet.set_column('C:C', 100)  # Set the width of column C to 25
-            worksheet.set_column('D:D', 90)  # Set the width of column C to 25
-            worksheet.set_column('E:E', 90)  # Set the width of column C to 25
-            worksheet.set_column('F:F', 70)  # Set the width of column C to 25
-            worksheet.set_column('G:G', 190)  # Set the width of column C to 25
+            worksheet.set_column('A:A', 17.5)  # Set the width of column A to 20
+            worksheet.set_column('B:B', 12.5)  # Set the width of column B to 15
+            worksheet.set_column('C:C', 15.83)  # Set the width of column C to 25
+            worksheet.set_column('D:D', 14.7)  # Set the width of column C to 25
+            worksheet.set_column('E:E', 14.7)  # Set the width of column C to 25
+            worksheet.set_column('F:F', 10.83)  # Set the width of column C to 25
+            worksheet.set_column('G:G', 30.83)  # Set the width of column C to 25
         
         
         query2 = text("""
@@ -168,11 +168,11 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
             worksheet = writer.sheets['BankData']
             
             # Set the column widths
-            worksheet.set_column('A:A', 90)  # Set the width of column A to 20
-            worksheet.set_column('B:B', 110)  # Set the width of column B to 15
-            worksheet.set_column('C:C', 110)  # Set the width of column C to 25
-            worksheet.set_column('D:D', 80)  # Set the width of column C to 25
-            worksheet.set_column('E:E', 90)  # Set the width of column C to 25
+            worksheet.set_column('A:A', 14.7)  # Set the width of column A to 20
+            worksheet.set_column('B:B', 17.5)  # Set the width of column B to 15
+            worksheet.set_column('C:C', 17.5)  # Set the width of column C to 25
+            worksheet.set_column('D:D', 12.5)  # Set the width of column C to 25
+            worksheet.set_column('E:E', 14.7)  # Set the width of column C to 25
         
         # Define the name of the resulting zip file
         unique_filename = f"{uuid.uuid4().hex}_result.zip"

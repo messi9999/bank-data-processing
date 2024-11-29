@@ -154,7 +154,7 @@ async def create_invoice_list(invoice_status: str = Form(...), files: list[Uploa
             Date = formatted_date,
             InvoiceNumber = row["Column3"],
             ClientName = row["Column5"],
-            Amount = row["Column6"],
+            Amount = row["Column6"].round(2),
             Status = row["Column7"],
         )
         
