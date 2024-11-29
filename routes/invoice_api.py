@@ -144,7 +144,8 @@ async def create_invoice_list(invoice_status: str = Form(...), files: list[Uploa
     for status_file_name in status_file_names:
         data = load_excel_data(file_path=f"excels/{status_file_name}")
         df_combined_status = pd.concat([df_combined_status, data], ignore_index=True)
-        file_locations.append(EXCELS_DIR / status_file_name)
+        f_location = EXCELS_DIR / status_file_name
+        file_locations.append(f_location)
     
     for invoice_number in df_combined_status['Numéro']:
         # Find the corresponding row in df_filtered and set 'Column7' to 'Soldée'
@@ -182,6 +183,7 @@ async def create_invoice_list(invoice_status: str = Form(...), files: list[Uploa
             );
         """))
     db.commit()
+    
     for f in file_locations:
         try:
             os.remove(f)

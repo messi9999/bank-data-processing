@@ -214,7 +214,11 @@ async def pre_reconciliation(files: list[UploadFile] = File(...), db: Session = 
     for file_name in file_names:
         data = load_excel_sheet(file_path=f"excels/{file_name}")
         df_combined = pd.concat([df_combined, data], ignore_index=True)
-    
+    for f in file_locations:
+        try:
+            os.remove(f)
+        except OSError as e:
+            print(f"Error: {f} : {e.strerror}")
     # transaction_sums = data.groupby('Numéro')['Montant TTC'].sum()
     transaction_aggregates = df_combined.groupby('Numéro').agg({
         'Montant TTC': 'sum',
@@ -247,11 +251,7 @@ async def pre_reconciliation(files: list[UploadFile] = File(...), db: Session = 
 
     # Commit the changes
     db.commit() 
-    for f in file_locations:
-        try:
-            os.remove(f)
-        except OSError as e:
-            print(f"Error: {f} : {e.strerror}")
+    
     
     return {"status": "Success"}
             
