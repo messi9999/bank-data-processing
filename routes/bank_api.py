@@ -159,6 +159,7 @@ async def bank_data1_process(files: list[UploadFile] = File(...), db: Session = 
         # Filter the DataFrame
     df_filtered = df_combined.loc[df_combined["Nature de l'opération"] == 'Virements reçus']
     df_filtered['Bank'] = 'Banque Principale'
+    print("------------", df_filtered['Date opération'])
     df_filtered['Date opération'] = pd.to_datetime(df_filtered['Date opération'])
     df_filtered.sort_values(by='Date opération', inplace=True)
     df_filtered['TransactionNumber'] = df_filtered.groupby('Date opération').cumcount() + 1
