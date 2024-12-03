@@ -85,6 +85,7 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
                 # Update the Matching field in bank_data
                 # invoice_numbers = ', '.join([str(inv.InvoiceNumber) for inv in matching_invoices])
                 invoice_numbers = [str(inv.InvoiceNumber) for inv in matching_invoices]
+                invoice_amounts = [str(inv.Amount) for inv in matching_invoices]
                 update_bank_data_query = text("""
                     UPDATE bank_data
                     SET "Matching" = :invoice_numbers
@@ -101,6 +102,7 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
                     """)
                     db.execute(update_invoice_data_query, {"transaction_number": transaction_number, "invoice_id": invoice.id})
 
+                filtered_invoices = [f_invoice for f_invoice in filtered_invoices if f_invoice.Amount not in invoice_amounts]
         # Commit the changes
         db.commit()
 
