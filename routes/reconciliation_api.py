@@ -45,7 +45,7 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
         # Step 1: Fetch all eligible bank_data and invoice_data
         bank_data_query = text("""
             SELECT id, "Credit", "TransactionNumber"
-            FROM bank_data
+            FROM bank_data ORDER BY "Date" ASC
         """)
         bank_data_entries = db.execute(bank_data_query).fetchall()
 
@@ -59,8 +59,9 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
         filtered_invoices = []
         
         for invoice in invoice_data_entries:
-            if invoice.Status is not "Soldée" and invoice.Status is not "soldée":
+            if invoice.Status is "" or invoice.Status is None:
                 filtered_invoices.append(invoice)
+            
         
         print(filtered_invoices)
 
@@ -74,6 +75,8 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
             #     invoice for invoice in invoice_data_entries
             #     if invoice.Amount == credit and invoice.Status not in ('Soldée', transaction_number)
             # ]
+            
+            
             
             matching_invoices = find_invoices_subset(filtered_invoices, credit)
             print("credit: ", credit)
