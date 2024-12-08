@@ -117,7 +117,7 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
                     """)
                     db.execute(update_invoice_data_query, {"transaction_number": transaction_number, "invoice_id": invoice.id})
 
-                new_filtered_inv = [f_invoice for f_invoice in new_filtered_inv if str(f_invoice.Amount) not in invoice_amounts]
+                filtered_invoices = [f_invoice for f_invoice in filtered_invoices if str(f_invoice.Amount) not in invoice_amounts]
         # Commit the changes
         db.commit()
 
