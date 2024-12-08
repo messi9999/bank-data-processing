@@ -44,8 +44,8 @@ def find_invoices_subset(invoices, bank_amount, partial=[]):
 def create_invoice_list(db: Session = Depends(get_db_session)):
         # Step 1: Fetch all eligible bank_data and invoice_data
         bank_data_query = text("""
-            SELECT id, "Credit", "TransactionNumber"
-            FROM bank_data ORDER BY "Date" ASC
+            SELECT id, "Credit", "TransactionNumber", "Matching"
+            FROM bank_data WHERE "Matching" IS NULL ORDER BY "Date" ASC
         """)
         bank_data_entries = db.execute(bank_data_query).fetchall()
 
@@ -105,7 +105,7 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
                     """)
                     db.execute(update_invoice_data_query, {"transaction_number": transaction_number, "invoice_id": invoice.id})
 
-                filtered_invoices = [f_invoice for f_invoice in filtered_invoices if f_invoice.Amount not in invoice_amounts]
+                filtered_invoices = [f_invoice for f_invoice in filtered_invoices if str(f_invoice.Amount) not in invoice_amounts]
         # Commit the changes
         db.commit()
 
