@@ -13,6 +13,8 @@ from datetime import datetime
 import os
 import zipfile
 
+from datetime import datetime
+
 
 # Create a new instance of APIRouter
 api_router = APIRouter()
@@ -44,19 +46,20 @@ def find_invoices_subset(invoices, bank_amount, partial=[]):
 def create_invoice_list(db: Session = Depends(get_db_session)):
         # Step 1: Fetch all eligible bank_data and invoice_data
         bank_data_query = text("""
-            SELECT id, "Credit", "TransactionNumber", "Matching"
+            SELECT id, "Credit", "TransactionNumber", "Matching", "Date"
             FROM bank_data WHERE "Matching" IS NULL ORDER BY "Date" ASC
         """)
         bank_data_entries = db.execute(bank_data_query).fetchall()
 
         invoice_data_query = text("""
-            SELECT id, "Amount", "Status", "InvoiceNumber"
+            SELECT id, "Amount", "Status", "InvoiceNumber", "Date"
             FROM invoice_data
             WHERE "Status" NOT IN ('Soldée')
         """)
         invoice_data_entries = db.execute(invoice_data_query).fetchall()
         
         filtered_invoices = []
+        
         
         for invoice in invoice_data_entries:
             if invoice.Status is "" or invoice.Status is None:
@@ -70,15 +73,24 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
             bank_id = bank_entry.id
             credit = bank_entry.Credit
             transaction_number = bank_entry.TransactionNumber
+            credit_date = datetime.strptime(str(bank_entry.Date), "%Y-%m-%d")
+            
+            
 
             # matching_invoices = [
             #     invoice for invoice in invoice_data_entries
             #     if invoice.Amount == credit and invoice.Status not in ('Soldée', transaction_number)
             # ]
             
+            new_filtered_inv = []
+            for f_inv in filtered_invoices:
+                
+                if datetime.strptime(str(f_inv.Date), "%Y-%m-%d") < credit_date:
+                    new_filtered_inv.append(f_inv)
             
             
-            matching_invoices = find_invoices_subset(filtered_invoices, credit)
+            
+            matching_invoices = find_invoices_subset(new_filtered_inv, credit)
             print("credit: ", credit)
             print("machings: ", matching_invoices)
             
@@ -105,7 +117,7 @@ def create_invoice_list(db: Session = Depends(get_db_session)):
                     """)
                     db.execute(update_invoice_data_query, {"transaction_number": transaction_number, "invoice_id": invoice.id})
 
-                filtered_invoices = [f_invoice for f_invoice in filtered_invoices if str(f_invoice.Amount) not in invoice_amounts]
+                new_filtered_inv = [f_invoice for f_invoice in new_filtered_inv if str(f_invoice.Amount) not in invoice_amounts]
         # Commit the changes
         db.commit()
 
